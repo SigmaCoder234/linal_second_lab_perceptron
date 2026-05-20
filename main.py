@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from perceptron import Perceptron
 from metrics import print_advanced_metrics, plot_roc_curve
 from experiments import run_experiments
-from cross_validation import run_cross_validation
+from cross_validation import run_cross_validation, grid_search_cross_validation
 
 def main():
     # 0. Выбор генератора данных
@@ -38,10 +38,7 @@ def main():
 2 - xor
 3 - circle
         """)
-    
-    elif data_choice == '0':
-        exit()
-
+        
         while True:
             data_type = input("Ваш выбор: ")
             if data_type in ['1', '2', '3']:
@@ -63,25 +60,29 @@ def main():
         # Нормализуем (считаем линейку по train, применяем к обоим)
         mean = np.mean(X_train, axis=0)
         std = np.std(X_train, axis=0)
+        # Предотвращаем деление на 0
+        std = np.where(std == 0, 1.0, std)
         X_train = (X_train - mean) / std
         X_test = (X_test - mean) / std
+    elif data_choice == '0':
+        exit()
         
-    # === Запускаем кросс-валидацию ===
-    run_cross_validation(X, y, k=5)
+    # === Запускаем кросс-валидацию и поиск лучших гиперпараметров ===
+    best_lr, best_batch_size, best_mean_acc, best_std = grid_search_cross_validation(X, y, k=5)
     
     # 2. Создаем нейросеть
     model = Perceptron()
     
-    # 3. Обучаем её
-    print("Начинаем обучение...")
+    # 3. Обучаем её с лучшими параметрами
+    print(f"Начинаем финальное обучение на train-выборке с лучшими параметрами (lr={best_lr}, batch_size={best_batch_size})...")
     train_losses, val_losses = model.fit(
         X=X_train, 
         y=y_train, 
         X_val=X_test,   # Передаем тест как валидацию
         y_val=y_test, 
         epochs=100, 
-        lr=0.1, 
-        batch_size=32
+        lr=best_lr, 
+        batch_size=best_batch_size
     )
     print("Обучение завершено!")
     
@@ -108,11 +109,19 @@ def main():
     print(f"Точность на обучении: {train_acc:.2f}%")
     print(f"Точность на тесте: {test_acc:.2f}%")
 
-    # 6. Визуализация разделяющей прямой
+    # 6. Визуализация разделяющей прямой и анализ ошибок
     plt.figure(figsize=(10, 6))
     
-    # Рисуем все точки (c=y_train задает цвет в зависимости от класса)
-    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap='bwr', alpha=0.7, edgecolors='k')
+    # Рисуем все обучающие точки (полупрозрачные)
+    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap='bwr', alpha=0.3, edgecolors='k', label='Train Points')
+    
+    # Рисуем все тестовые точки (яркие)
+    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap='bwr', alpha=0.8, edgecolors='k', label='Test Points')
+    
+    # Выделяем ошибочно классифицированные точки на тесте желтым крестиком
+    errors_mask = (test_preds != y_test)
+    if np.any(errors_mask):
+        plt.scatter(X_test[errors_mask, 0], X_test[errors_mask, 1], color='yellow', marker='x', s=150, linewidths=3, label='Ошибки (Misclassified)')
     
     # Рисуем прямую w0*x0 + w1*x1 + b = 0  =>  x1 = -(w0*x0 + b) / w1
     x0_min, x0_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
@@ -121,17 +130,19 @@ def main():
     
     plt.plot(x0_line, x1_line, color='green', linewidth=3, label='Decision Boundary')
     
-    plt.title('Разделяющая прямая перцептрона')
+    plt.title('Разделяющая прямая перцептрона с выделением ошибок')
     plt.xlabel('Признак 1 (Нормализованный)')
     plt.ylabel('Признак 2 (Нормализованный)')
     plt.legend()
     plt.grid(True)
     plt.show()
 
+    # Запуск экспериментов
     run_experiments(X_train, y_train, X_test, y_test)
 
+    # Вывод расширенных метрик
     print_advanced_metrics(y_test, test_preds, model.forward(X_test))
     plot_roc_curve(y_test, model.forward(X_test))
 
 if __name__ == '__main__':
-    main()
+    main()
