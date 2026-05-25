@@ -4,7 +4,7 @@
 
   
 
-**Работу выполнил:** студент группы Б25-527 Попов Илья  
+**Работу выполнил:** Б25-527 Попов Илья  
 
 **Репозиторий GitHub:** [https://github.com/SigmaCoder234/linal_second_lab_perceptron](https://github.com/SigmaCoder234/linal_second_lab_perceptron)
 
@@ -44,7 +44,9 @@
 
 Однослойный перцептрон представляет собой линейный классификатор, формирующий разделяющую гиперплоскость в пространстве признаков. Для входного вектора $\mathbf{x} \in \mathbb{R}^d$ вычисляется взвешенная сумма (логит):
 
-$$z = \mathbf{w}^T \mathbf{x} + b = \sum_{j=1}^{d} w_j x_j + b$$
+$$
+z = \mathbf{w}^T \mathbf{x} + b = \sum_{j=1}^{d} w_j x_j + b
+$$
 
 где $\mathbf{w} \in \mathbb{R}^d$ — вектор весов модели, $b \in \mathbb{R}$ — смещение (bias).
 
